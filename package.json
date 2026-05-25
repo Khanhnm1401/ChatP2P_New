@@ -1,0 +1,26 @@
+{
+  "name": "p2p-secure-chat",
+  "version": "1.0.0",
+  "description": "P2P Secure Chat System for Students",
+  "main": "src/bootstrap-server/server.js",
+  "scripts": {
+    "start": "node start-all.js",
+    "start:bootstrap": "node src/bootstrap-server/server.js",
+    "start:peer": "node src/peer-node/peer.js",
+    "start:ui": "node src/ui/server.js",
+    "dev": "nodemon src/bootstrap-server/server.js",
+    "test": "node tests/test.js"
+  },
+  "keywords": ["p2p", "chat", "websocket", "encryption"],
+  "author": "Student",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "ws": "^8.13.0",
+    "uuid": "^9.0.0",
+    "crypto": "^1.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
