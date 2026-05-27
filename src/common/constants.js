@@ -1,0 +1,40 @@
+/**
+ * Constants for P2P Chat System
+ */
+
+const MESSAGE_TYPES = {
+  REGISTER: 'REGISTER',
+  PEER_LIST: 'PEER_LIST',
+  CHAT: 'CHAT',
+  GROUP_CHAT: 'GROUP_CHAT',
+  ACK: 'ACK',
+  HEARTBEAT: 'HEARTBEAT',
+  PEER_STATUS_UPDATE: 'PEER_STATUS_UPDATE',
+  DISCONNECT: 'DISCONNECT',
+  ERROR: 'ERROR'
+};
+
+const STATUS = {
+  ONLINE: 'online',
+  OFFLINE: 'offline'
+};
+
+const HEARTBEAT_INTERVAL = 10000; // 10 seconds
+const HEARTBEAT_TIMEOUT = 30000;  // 30 seconds
+const MESSAGE_RETRY_LIMIT = 3;
+const MESSAGE_RETRY_TIMEOUT = 5000; // 5 seconds
+
+// Encryption
+const RSA_KEY_SIZE = 2048;
+const AES_ALGORITHM = 'aes-256-cbc';
+
+module.exports = {
+  MESSAGE_TYPES,
+  STATUS,
+  HEARTBEAT_INTERVAL,
+  HEARTBEAT_TIMEOUT,
+  MESSAGE_RETRY_LIMIT,
+  MESSAGE_RETRY_TIMEOUT,
+  RSA_KEY_SIZE,
+  AES_ALGORITHM
+};
