@@ -1,0 +1,1486 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>P2P Chat - Secure Workspace</title>
+  <meta name="description" content="Hệ thống chat ngang hàng P2P bảo mật, phi tập trung cho sinh viên">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --primary: #0f766e;
+      --primary-dark: #115e59;
+      --primary-light: #dff7f3;
+      --primary-soft: rgba(15, 118, 110, 0.12);
+      --accent: #c2410c;
+      --bg-main: #f5efe6;
+      --bg-white: #fffdf9;
+      --bg-sidebar: rgba(255, 253, 249, 0.88);
+      --bg-input: #f4ede3;
+      --bg-msg-other: #efe4d6;
+      --text-primary: #1f2937;
+      --text-secondary: #5b6471;
+      --text-muted: #8d98a7;
+      --border: rgba(31, 41, 55, 0.08);
+      --border-light: rgba(31, 41, 55, 0.04);
+      --online: #1d9b73;
+      --shadow: 0 24px 60px rgba(102, 79, 47, 0.14);
+      --shadow-hover: 0 20px 40px rgba(72, 55, 34, 0.16);
+      --radius-bubble: 22px;
+      --radius-card: 24px;
+      --transition: 0.2s ease;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(15, 118, 110, 0.16), transparent 28%),
+        radial-gradient(circle at right center, rgba(194, 65, 12, 0.10), transparent 25%),
+        linear-gradient(135deg, #f6efe6 0%, #f2e7d7 48%, #f8f4ed 100%);
+      color: var(--text-primary);
+      -webkit-font-smoothing: antialiased;
+      padding: 20px;
+    }
+
+    /* ===================== LAYOUT ===================== */
+    .app {
+      display: flex;
+      height: calc(100vh - 40px);
+      width: 100%;
+      overflow: hidden;
+      border-radius: 30px;
+      border: 1px solid rgba(255,255,255,0.45);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    /* ===================== SIDEBAR ===================== */
+    .sidebar {
+      width: 360px;
+      min-width: 300px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.72), rgba(255,252,247,0.92));
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .sidebar-header {
+      padding: 22px 18px 12px;
+      background: transparent;
+    }
+
+    .sidebar-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .sidebar-title {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      color: var(--text-primary);
+    }
+
+    .my-status-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      background: rgba(15, 118, 110, 0.08);
+      padding: 6px 12px;
+      border-radius: 20px;
+      border: 1px solid rgba(15, 118, 110, 0.08);
+    }
+
+    .my-status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--online);
+    }
+
+    .search-wrapper {
+      position: relative;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 14px;
+      pointer-events: none;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 12px 16px 12px 36px;
+      background: rgba(255,255,255,0.7);
+      border: 1px solid transparent;
+      border: none;
+      border-radius: 50px;
+      font-size: 15px;
+      color: var(--text-primary);
+      font-family: inherit;
+      outline: none;
+      transition: var(--transition);
+    }
+
+    .search-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .search-input:focus {
+      background: #ffffff;
+      border-color: rgba(15, 118, 110, 0.18);
+    }
+
+    /* Peer List */
+    .peers-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+
+    .section-label {
+      padding: 8px 16px 4px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .peer-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 12px;
+      margin: 0 8px;
+      border-radius: 18px;
+      cursor: pointer;
+      transition: background var(--transition), transform var(--transition), box-shadow var(--transition);
+      user-select: none;
+      position: relative;
+    }
+
+    .peer-item:hover {
+      background: rgba(255,255,255,0.74);
+      transform: translateY(-1px);
+    }
+
+    .peer-item.active {
+      background: linear-gradient(135deg, rgba(15, 118, 110, 0.16), rgba(15, 118, 110, 0.06));
+      box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.10);
+    }
+
+    .peer-item.active .peer-name {
+      color: var(--primary);
+    }
+
+    /* Avatar */
+    .avatar {
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .avatar-circle {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 20px;
+      color: white;
+      letter-spacing: -0.5px;
+      box-shadow: 0 12px 24px rgba(31, 41, 55, 0.16);
+    }
+
+    .avatar-circle.small {
+      width: 36px;
+      height: 36px;
+      font-size: 14px;
+    }
+
+    .online-dot {
+      position: absolute;
+      bottom: 1px;
+      right: 1px;
+      width: 14px;
+      height: 14px;
+      background: var(--online);
+      border: 2.5px solid var(--bg-white);
+      border-radius: 50%;
+    }
+
+    .online-dot.offline {
+      background: var(--text-muted);
+    }
+
+    /* Peer Info */
+    .peer-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .peer-name-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+    }
+
+    .peer-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .peer-time {
+      font-size: 12px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+      margin-left: 4px;
+    }
+
+    .peer-preview {
+      font-size: 13px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 2px;
+      line-height: 1.45;
+    }
+
+    .peer-item.active .peer-preview {
+      color: var(--primary);
+    }
+
+    .unread-badge {
+      background: var(--primary);
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      min-width: 18px;
+      height: 18px;
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 4px;
+    }
+
+    .no-peers {
+      padding: 40px 20px;
+      text-align: center;
+    }
+
+    .no-peers-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+
+    .no-peers h3 {
+      font-size: 16px;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .no-peers p {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    /* ===================== CHAT AREA ===================== */
+    .chat-pane {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background:
+        linear-gradient(180deg, rgba(255,253,249,0.92), rgba(255,250,244,0.98));
+      overflow: hidden;
+    }
+
+    /* Chat Header */
+    .chat-header {
+      height: 60px;
+      background: rgba(255,253,249,0.88);
+      border-bottom: 1px solid var(--border);
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-shrink: 0;
+      box-shadow: 0 6px 20px rgba(101, 82, 57, 0.08);
+      z-index: 10;
+    }
+
+    .chat-header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .chat-header-info h2 {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text-primary);
+      line-height: 1.2;
+    }
+
+    .chat-header-info .status-text {
+      font-size: 12px;
+      color: var(--online);
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .chat-header-info .status-text.offline {
+      color: var(--text-muted);
+    }
+
+    .chat-header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .action-btn {
+      min-width: 72px;
+      height: 36px;
+      border-radius: 999px;
+      background: rgba(15, 118, 110, 0.08);
+      border: 1px solid rgba(15, 118, 110, 0.08);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      transition: background var(--transition);
+      color: var(--primary);
+    }
+
+    .action-btn:hover {
+      background: rgba(15, 118, 110, 0.14);
+    }
+
+    /* Messages Area */
+    .messages-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      background:
+        radial-gradient(circle at top, rgba(15, 118, 110, 0.05), transparent 24%),
+        linear-gradient(180deg, rgba(255,253,249,0.72), rgba(252,246,238,0.98));
+    }
+
+    /* Date divider */
+    .date-divider {
+      text-align: center;
+      margin: 12px 0;
+    }
+
+    .date-divider span {
+      font-size: 11px;
+      color: var(--text-muted);
+      background: var(--bg-white);
+      padding: 0 12px;
+      font-weight: 500;
+    }
+
+    /* Message groups */
+    .msg-group {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 4px;
+    }
+
+    .msg-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 6px;
+      margin-bottom: 2px;
+    }
+
+    .msg-row.own {
+      justify-content: flex-end;
+    }
+
+    .msg-row.other {
+      justify-content: flex-start;
+    }
+
+    /* Bubbles */
+    .bubble {
+      max-width: 65%;
+      padding: 10px 15px;
+      border-radius: var(--radius-bubble);
+      word-break: break-word;
+      font-size: 15px;
+      line-height: 1.45;
+      position: relative;
+      animation: fadeIn 0.18s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .bubble.own {
+      background: linear-gradient(135deg, #0f766e, #146c72);
+      color: white;
+      border-bottom-right-radius: 8px;
+      box-shadow: 0 16px 28px rgba(15, 118, 110, 0.22);
+    }
+
+    .bubble.other {
+      background: linear-gradient(135deg, #f4ebde, #ede0ce);
+      color: var(--text-primary);
+      border-bottom-left-radius: 8px;
+      box-shadow: 0 12px 24px rgba(88, 65, 40, 0.08);
+    }
+
+    /* First/last in group rounding */
+    .msg-row.own .bubble.first { border-top-right-radius: var(--radius-bubble); }
+    .msg-row.own .bubble.last  { border-bottom-right-radius: 4px; }
+    .msg-row.other .bubble.first { border-top-left-radius: var(--radius-bubble); }
+    .msg-row.other .bubble.last  { border-bottom-left-radius: 4px; }
+
+    .bubble-meta {
+      font-size: 11px;
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .msg-row.own .bubble-meta {
+      justify-content: flex-end;
+      color: rgba(255,255,255,0.75);
+    }
+
+    .msg-row.other .bubble-meta {
+      color: var(--text-muted);
+    }
+
+    .sender-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+      margin-left: 4px;
+    }
+
+    /* Empty state */
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+      text-align: center;
+      padding: 40px;
+      animation: fadeIn 0.4s ease;
+    }
+
+    .empty-icon {
+      font-size: 72px;
+      margin-bottom: 20px;
+      opacity: 0.7;
+    }
+
+    .empty-state h3 {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .empty-state p {
+      font-size: 14px;
+      color: var(--text-secondary);
+      max-width: 300px;
+      line-height: 1.6;
+    }
+
+    /* Welcome / no chat selected state */
+    .welcome-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background:
+        radial-gradient(circle at center, rgba(15, 118, 110, 0.08), transparent 26%),
+        transparent;
+    }
+
+    .welcome-icon {
+      width: 108px;
+      height: 108px;
+      border-radius: 28px;
+      background: linear-gradient(135deg, #0f766e, #1d4ed8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 34px;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      color: white;
+      margin-bottom: 24px;
+      box-shadow: 0 24px 46px rgba(17, 94, 89, 0.24);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 8px 32px rgba(0, 132, 255, 0.3); }
+      50%       { box-shadow: 0 8px 48px rgba(0, 132, 255, 0.5); }
+    }
+
+    .welcome-state h2 {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      color: var(--text-primary);
+      margin-bottom: 10px;
+    }
+
+    .welcome-state p {
+      font-size: 15px;
+      color: var(--text-secondary);
+      max-width: 320px;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    .feature-pills {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 20px;
+    }
+
+    .feature-pill {
+      background: rgba(255,255,255,0.76);
+      color: var(--text-secondary);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 700;
+      border: 1px solid rgba(31, 41, 55, 0.06);
+    }
+
+    /* ===================== INPUT AREA ===================== */
+    .input-area {
+      padding: 14px 18px;
+      background: rgba(255,253,249,0.88);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .input-side-btns {
+      display: flex;
+      gap: 8px;
+    }
+
+    .input-btn {
+      min-width: 84px;
+      height: 36px;
+      border-radius: 999px;
+      background: rgba(15, 118, 110, 0.08);
+      border: 1px solid rgba(15, 118, 110, 0.10);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      transition: background var(--transition);
+      color: var(--primary);
+      flex-shrink: 0;
+    }
+
+    .input-btn:hover {
+      background: rgba(15, 118, 110, 0.14);
+    }
+
+    .input-box-wrapper {
+      flex: 1;
+      background: rgba(255,255,255,0.78);
+      border-radius: 26px;
+      border: 1px solid transparent;
+      display: flex;
+      align-items: flex-end;
+      padding: 2px 4px 2px 14px;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+
+    .input-box-wrapper:focus-within {
+      border-color: var(--primary);
+      background: var(--bg-white);
+      box-shadow: 0 0 0 3px rgba(15,118,110,0.08);
+    }
+
+    .msg-textarea {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-size: 15px;
+      font-family: inherit;
+      color: var(--text-primary);
+      resize: none;
+      min-height: 36px;
+      max-height: 120px;
+      line-height: 1.5;
+      padding: 7px 0;
+    }
+
+    .msg-textarea::placeholder {
+      color: var(--text-muted);
+    }
+
+    .send-btn {
+      min-width: 96px;
+      height: 38px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #0f766e, #115e59);
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      transition: all var(--transition);
+      flex-shrink: 0;
+      margin: 1px;
+    }
+
+    .send-btn:hover {
+      background: var(--primary-dark);
+      transform: scale(1.08);
+    }
+
+    .send-btn:active {
+      transform: scale(0.95);
+    }
+
+    .send-btn:disabled {
+      background: var(--bg-input);
+      color: var(--text-muted);
+      cursor: default;
+      transform: none;
+    }
+
+    /* Typing indicator */
+    .typing-indicator {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .typing-dots span {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      background: var(--text-muted);
+      border-radius: 50%;
+      animation: typingBounce 1.2s infinite;
+    }
+
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes typingBounce {
+      0%, 60%, 100% { transform: translateY(0); }
+      30% { transform: translateY(-6px); }
+    }
+
+    /* Toast notifications */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .toast {
+      background: var(--text-primary);
+      color: white;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: var(--shadow-hover);
+      animation: slideInRight 0.3s ease, fadeOut 0.3s ease 2.7s forwards;
+      max-width: 300px;
+    }
+
+    .toast.success { background: #31a24c; }
+    .toast.error   { background: #e02020; }
+    .toast.info    { background: var(--primary); }
+
+    @keyframes slideInRight {
+      from { transform: translateX(120%); opacity: 0; }
+      to   { transform: translateX(0);   opacity: 1; }
+    }
+
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to   { opacity: 0; }
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #aaa; }
+
+    /* Connection status bar */
+    .connection-bar {
+      display: none;
+      background: #b45309;
+      color: white;
+      text-align: center;
+      padding: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      border-radius: 16px;
+      margin-bottom: 12px;
+    }
+
+    .connection-bar.error { background: #e02020; }
+    .connection-bar.show  { display: block; }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      body { padding: 0; }
+      .app { height: 100vh; border-radius: 0; }
+      .sidebar { width: 100%; position: absolute; height: 100vh; z-index: 100; }
+      .chat-pane { width: 100%; }
+      .sidebar.hide { display: none; }
+      .input-btn,
+      .action-btn,
+      .send-btn { min-width: unset; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="connection-bar" id="connectionBar">
+  Dang ket noi den bootstrap server...
+</div>
+
+<div class="app">
+  <!-- ========== SIDEBAR ========== -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-title-row">
+        <h1 class="sidebar-title">Chat P2P</h1>
+        <div class="my-status-badge" id="myStatusBadge">
+          <span class="my-status-dot"></span>
+          <span id="myId">Web_Peer</span>
+        </div>
+      </div>
+      <div class="search-wrapper">
+        <span class="search-icon">Tim</span>
+        <input
+          type="text"
+          class="search-input"
+          id="searchInput"
+          placeholder="Tim peer hoac phong"
+          autocomplete="off"
+        >
+      </div>
+    </div>
+
+    <div class="peers-list" id="peersList">
+      <div class="no-peers">
+        <div class="no-peers-icon">P2P</div>
+        <h3>Đang tìm peers...</h3>
+        <p>Hãy chắc chắn bootstrap server đang chạy</p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ========== CHAT PANE ========== -->
+  <main class="chat-pane" id="chatPane">
+
+    <!-- Welcome screen (no peer selected) -->
+    <div class="welcome-state" id="welcomeState">
+      <div class="welcome-icon">P2P</div>
+      <h2>Secure Workspace</h2>
+      <p>Chon mot peer hoac phong nhom de bat dau trao doi du lieu an toan tren mo hinh phan tan.</p>
+      <div class="feature-pills">
+        <span class="feature-pill">Ma hoa dau cuoi</span>
+        <span class="feature-pill">Truyen truc tiep</span>
+        <span class="feature-pill">Khong phu thuoc server trung tam</span>
+      </div>
+    </div>
+
+    <!-- Chat view (peer selected) -->
+    <div id="chatView" style="display:none; flex:1; flex-direction:column; overflow:hidden; display:none;">
+      <!-- Header -->
+      <header class="chat-header">
+        <div class="chat-header-left">
+          <div class="avatar">
+            <div class="avatar-circle small" id="headerAvatar">P</div>
+            <span class="online-dot" id="headerDot"></span>
+          </div>
+          <div class="chat-header-info">
+            <h2 id="headerName">Peer</h2>
+            <div class="status-text" id="headerStatus">
+              <span>Dang hoat dong</span>
+            </div>
+          </div>
+        </div>
+        <div class="chat-header-actions">
+          <button class="action-btn" title="Trang thai">Status</button>
+          <button class="action-btn" title="Bao mat">Secure</button>
+          <button class="action-btn" title="Thong tin">Info</button>
+        </div>
+      </header>
+
+      <!-- Messages -->
+      <div class="messages-area" id="messagesArea">
+        <div class="empty-state" id="emptyConvState">
+          <div class="empty-icon">CHAT</div>
+          <h3 id="emptyTitle">Bắt đầu cuộc trò chuyện</h3>
+          <p id="emptySubtitle">Gửi tin nhắn đầu tiên!</p>
+        </div>
+      </div>
+
+      <!-- Input -->
+      <div class="input-area">
+        <div class="input-side-btns">
+          <button class="input-btn" title="Che do phong">Phong</button>
+          <button class="input-btn" title="Che do bao mat">Bao mat</button>
+        </div>
+        <div class="input-box-wrapper">
+          <textarea
+            class="msg-textarea"
+            id="msgInput"
+            placeholder="Nhập tin nhắn..."
+            rows="1"
+          ></textarea>
+        </div>
+        <button class="send-btn" id="sendBtn" title="Gửi (Enter)" disabled>Gui</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+  const SERVER = '';
+  const GROUP_ROOM_ID = '__group__';
+
+  let myPeerId = 'Web_Peer';
+  let selectedPeer = null;
+  let allPeers = [];
+  let msgCache = {};
+  let refreshInterval = null;
+  let peerListInterval = null;
+
+  const GRADIENTS = [
+    ['#667eea', '#764ba2'],
+    ['#f093fb', '#f5576c'],
+    ['#4facfe', '#00f2fe'],
+    ['#43e97b', '#38f9d7'],
+    ['#fa709a', '#fee140'],
+    ['#a18cd1', '#fbc2eb'],
+    ['#fccb90', '#d57eeb'],
+    ['#a1c4fd', '#c2e9fb'],
+    ['#fd7043', '#ff8a65'],
+    ['#26c6da', '#00acc1'],
+  ];
+
+  function getGradient(peerId) {
+    let hash = 0;
+    for (let i = 0; i < peerId.length; i++) {
+      hash = peerId.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const idx = Math.abs(hash) % GRADIENTS.length;
+    return `linear-gradient(135deg, ${GRADIENTS[idx][0]}, ${GRADIENTS[idx][1]})`;
+  }
+
+  function getInitial(peerId) {
+    return (peerId || '?')[0].toUpperCase();
+  }
+
+  function formatTime(ts) {
+    const d = new Date(ts);
+    return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function formatDate(ts) {
+    const d = new Date(ts);
+    const now = new Date();
+    if (d.toDateString() === now.toDateString()) return 'Hôm nay';
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    if (d.toDateString() === yesterday.toDateString()) return 'Hôm qua';
+    return d.toLocaleDateString('vi-VN');
+  }
+
+  function timeSince(ts) {
+    const diff = Date.now() - ts;
+    if (diff < 60000) return 'Vừa xong';
+    if (diff < 3600000) return `${Math.floor(diff / 60000)} phút`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)} giờ`;
+    return formatTime(ts);
+  }
+
+  function isGroupRoom(peerId) {
+    return peerId === GROUP_ROOM_ID;
+  }
+
+  function getPeerById(peerId) {
+    return allPeers.find(peer => peer.peer_id === peerId) || null;
+  }
+
+  function getOnlinePeers() {
+    return allPeers.filter(peer => peer.status !== 'offline');
+  }
+
+  function getGroupPreview(lastMessage) {
+    if (!lastMessage) {
+      const onlineCount = getOnlinePeers().length;
+      return onlineCount > 0
+        ? `Chat nhóm với ${onlineCount} peer đang online`
+        : 'Chưa có peer nào online';
+    }
+
+    const senderLabel = lastMessage.from === myPeerId ? 'Bạn' : lastMessage.from;
+    return `${senderLabel}: ${lastMessage.message}`;
+  }
+
+  function setConnectionBar(message = '', isError = false) {
+    const bar = document.getElementById('connectionBar');
+    if (!message) {
+      bar.classList.remove('show', 'error');
+      return;
+    }
+
+    bar.textContent = message;
+    bar.classList.add('show');
+    bar.classList.toggle('error', isError);
+  }
+
+  function showToast(msg, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `<span>${msg}</span>`;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 3200);
+  }
+
+  async function init() {
+    try {
+      const info = await fetch(`${SERVER}/info`).then(r => r.json());
+      myPeerId = info.peerId || 'Web_Peer';
+      document.getElementById('myId').textContent = myPeerId;
+      setConnectionBar('');
+    } catch (e) {
+      console.warn('Cannot fetch peer info:', e);
+      setConnectionBar('Khong the ket noi den Web UI peer', true);
+    }
+
+    await Promise.all([loadAndRenderPeers(), loadGroupMessages()]);
+    setupInputListeners();
+
+    peerListInterval = setInterval(loadAndRenderPeers, 3000);
+    refreshInterval = setInterval(() => {
+      if (!selectedPeer) return;
+      if (isGroupRoom(selectedPeer)) {
+        loadGroupMessages();
+      } else {
+        loadMessages(selectedPeer);
+      }
+    }, 2000);
+  }
+
+  async function loadAndRenderPeers() {
+    try {
+      const peers = await fetch(`${SERVER}/peers`).then(r => r.json());
+      allPeers = peers;
+      setConnectionBar('');
+      renderPeerList(peers);
+
+      if (selectedPeer && !isGroupRoom(selectedPeer)) {
+        updateHeaderForPeer(selectedPeer);
+      }
+    } catch (e) {
+      console.error('Error loading peers:', e);
+      setConnectionBar('Khong the tai danh sach peer', true);
+    }
+  }
+
+  function renderPeerList(peers) {
+    const list = document.getElementById('peersList');
+    const query = document.getElementById('searchInput').value.trim().toLowerCase();
+    const filteredPeers = peers.filter(peer => peer.peer_id.toLowerCase().includes(query));
+    const shouldShowGroup = !query || 'nhom chung group room all'.includes(query);
+    const groupMessages = msgCache[GROUP_ROOM_ID] || [];
+    const lastGroupMessage = groupMessages[groupMessages.length - 1];
+    const sections = [];
+
+    if (shouldShowGroup) {
+      sections.push(`
+        <div class="section-label">Phong</div>
+        <div class="peer-item${selectedPeer === GROUP_ROOM_ID ? ' active' : ''}"
+             onclick="selectPeer('${GROUP_ROOM_ID}')"
+             data-peer="${GROUP_ROOM_ID}"
+             id="peer-item-${GROUP_ROOM_ID}">
+          <div class="avatar">
+            <div class="avatar-circle" style="background: linear-gradient(135deg, #111827, #1d4ed8);">N</div>
+            <span class="online-dot${getOnlinePeers().length ? '' : ' offline'}" title="Group room"></span>
+          </div>
+          <div class="peer-info">
+            <div class="peer-name-row">
+              <span class="peer-name">Nhóm chung</span>
+              ${lastGroupMessage ? `<span class="peer-time">${timeSince(lastGroupMessage.timestamp)}</span>` : ''}
+            </div>
+            <div class="peer-preview">${escapeHtml(truncate(getGroupPreview(lastGroupMessage), 40))}</div>
+          </div>
+        </div>
+      `);
+    }
+
+    if (filteredPeers.length > 0) {
+      sections.push('<div class="section-label">Peers</div>');
+      sections.push(filteredPeers.map(peer => {
+        const isActive = selectedPeer === peer.peer_id;
+        const msgs = msgCache[peer.peer_id] || [];
+        const lastMsg = msgs[msgs.length - 1];
+        const preview = lastMsg
+          ? (lastMsg.from === myPeerId ? `Bạn: ${lastMsg.message}` : lastMsg.message)
+          : (peer.status === 'offline' ? 'Peer dang offline' : 'Chua co tin nhan');
+        const timeStr = lastMsg ? timeSince(lastMsg.timestamp) : '';
+        const gradient = getGradient(peer.peer_id);
+        const initial = getInitial(peer.peer_id);
+        const isOnline = peer.status !== 'offline';
+
+        return `
+          <div class="peer-item${isActive ? ' active' : ''}"
+               onclick="selectPeer('${peer.peer_id}')"
+               data-peer="${peer.peer_id}"
+               id="peer-item-${peer.peer_id}">
+            <div class="avatar">
+              <div class="avatar-circle" style="background: ${gradient};">${initial}</div>
+              <span class="online-dot${isOnline ? '' : ' offline'}" title="${isOnline ? 'Online' : 'Offline'}"></span>
+            </div>
+            <div class="peer-info">
+              <div class="peer-name-row">
+                <span class="peer-name">${peer.peer_id}</span>
+                ${timeStr ? `<span class="peer-time">${timeStr}</span>` : ''}
+              </div>
+              <div class="peer-preview">${escapeHtml(truncate(preview, 40))}</div>
+            </div>
+          </div>
+        `;
+      }).join(''));
+    }
+
+    if (sections.length === 0) {
+      list.innerHTML = `
+        <div class="no-peers">
+          <div class="no-peers-icon">${query ? 'Tim' : 'P2P'}</div>
+          <h3>${query ? 'Không tìm thấy' : 'Chưa có peer nào'}</h3>
+          <p>${query ? 'Thử từ khóa khác' : 'Hãy chạy thêm peer node để kết nối'}</p>
+        </div>
+      `;
+      return;
+    }
+
+    list.innerHTML = sections.join('');
+  }
+
+  function selectPeer(peerId) {
+    selectedPeer = peerId;
+
+    document.querySelectorAll('.peer-item').forEach(el => el.classList.remove('active'));
+    const selectedEl = document.querySelector(`[data-peer="${peerId}"]`);
+    if (selectedEl) selectedEl.classList.add('active');
+
+    document.getElementById('welcomeState').style.display = 'none';
+    const chatView = document.getElementById('chatView');
+    chatView.style.display = 'flex';
+    chatView.style.flexDirection = 'column';
+    chatView.style.flex = '1';
+    chatView.style.overflow = 'hidden';
+
+    if (isGroupRoom(peerId)) {
+      updateHeaderForGroup();
+      document.getElementById('emptyTitle').textContent = 'Bắt đầu cuộc trò chuyện nhóm';
+      document.getElementById('emptySubtitle').textContent = 'Tin nhắn sẽ được phát tới mọi peer đang online';
+      loadGroupMessages();
+    } else {
+      updateHeaderForPeer(peerId);
+      document.getElementById('emptyTitle').textContent = `Bắt đầu trò chuyện với ${peerId}`;
+      document.getElementById('emptySubtitle').textContent = 'Tin nhắn được mã hóa end-to-end';
+      loadMessages(peerId);
+    }
+
+    updateComposerState();
+    updateSendBtn();
+  }
+
+  function updateHeaderForPeer(peerId) {
+    const peer = getPeerById(peerId);
+    const gradient = getGradient(peerId);
+    const initial = getInitial(peerId);
+    const headerAvatar = document.getElementById('headerAvatar');
+    const headerDot = document.getElementById('headerDot');
+    const headerStatus = document.getElementById('headerStatus');
+    const isOnline = !peer || peer.status !== 'offline';
+
+    headerAvatar.style.background = gradient;
+    headerAvatar.textContent = initial;
+    document.getElementById('headerName').textContent = peerId;
+    headerStatus.classList.toggle('offline', !isOnline);
+    headerStatus.innerHTML = `<span>${isOnline ? 'Dang hoat dong' : 'Da offline'}</span>`;
+    headerDot.classList.toggle('offline', !isOnline);
+  }
+
+  function updateHeaderForGroup() {
+    const headerAvatar = document.getElementById('headerAvatar');
+    const headerDot = document.getElementById('headerDot');
+    const headerStatus = document.getElementById('headerStatus');
+    const onlineCount = getOnlinePeers().length;
+
+    headerAvatar.style.background = 'linear-gradient(135deg, #111827, #1d4ed8)';
+    headerAvatar.textContent = 'N';
+    document.getElementById('headerName').textContent = 'Nhóm chung';
+    headerStatus.classList.toggle('offline', onlineCount === 0);
+    headerStatus.innerHTML = `<span>${onlineCount} peer dang online</span>`;
+    headerDot.classList.toggle('offline', onlineCount === 0);
+  }
+
+  async function loadMessages(peerId) {
+    try {
+      const data = await fetch(`${SERVER}/messages/${peerId}`).then(r => r.json());
+      if (data && Array.isArray(data.messages)) {
+        const prevCount = (msgCache[peerId] || []).length;
+        msgCache[peerId] = data.messages;
+
+        if (selectedPeer === peerId) {
+          const prevScrollBottom = isNearBottom();
+          renderMessages(peerId);
+          if (prevScrollBottom || data.messages.length > prevCount) {
+            scrollToBottom();
+          }
+        }
+
+        renderPeerList(allPeers);
+      }
+    } catch (e) {
+      console.error('Error loading messages for', peerId, e);
+    }
+  }
+
+  async function loadGroupMessages() {
+    try {
+      const data = await fetch(`${SERVER}/messages/group/all`).then(r => r.json());
+      if (data && Array.isArray(data.messages)) {
+        const prevCount = (msgCache[GROUP_ROOM_ID] || []).length;
+        msgCache[GROUP_ROOM_ID] = data.messages;
+
+        if (selectedPeer === GROUP_ROOM_ID) {
+          const prevScrollBottom = isNearBottom();
+          renderMessages(GROUP_ROOM_ID);
+          if (prevScrollBottom || data.messages.length > prevCount) {
+            scrollToBottom();
+          }
+        }
+
+        renderPeerList(allPeers);
+      }
+    } catch (e) {
+      console.error('Error loading group messages', e);
+    }
+  }
+
+  function renderMessages(peerId) {
+    const area = document.getElementById('messagesArea');
+    const messages = msgCache[peerId] || [];
+    const emptyState = document.getElementById('emptyConvState');
+
+    if (messages.length === 0) {
+      emptyState.style.display = 'flex';
+      Array.from(area.children).forEach(el => {
+        if (!el.id) el.remove();
+      });
+      return;
+    }
+
+    emptyState.style.display = 'none';
+
+    let html = '';
+    let prevDate = null;
+    let prevFrom = null;
+
+    messages.forEach(msg => {
+      const isOwn = msg.from === myPeerId;
+      const cls = isOwn ? 'own' : 'other';
+      const time = formatTime(msg.timestamp);
+      const date = formatDate(msg.timestamp);
+      const content = escapeHtml(msg.message || '');
+      const isEncrypted = msg.encrypted;
+      const showSender = msg.type === 'GROUP_CHAT' && !isOwn && msg.from !== prevFrom;
+
+      if (date !== prevDate) {
+        html += `<div class="date-divider"><span>${date}</span></div>`;
+        prevDate = date;
+        prevFrom = null;
+      }
+
+      html += `
+        <div class="msg-row ${cls}">
+          <div class="bubble ${cls}">
+            ${showSender ? `<div class="sender-name">${escapeHtml(msg.from)}</div>` : ''}
+            <div>${content}</div>
+            <div class="bubble-meta">
+              <span>${time}</span>
+              ${msg.type === 'GROUP_CHAT' ? '<span title="Phong nhom">GROUP</span>' : ''}
+              ${isEncrypted ? '<span title="Ma hoa E2E">SECURE</span>' : ''}
+              ${isOwn ? '<span title="Da gui">SENT</span>' : ''}
+            </div>
+          </div>
+        </div>
+      `;
+
+      prevFrom = msg.from;
+    });
+
+    area.innerHTML = html + `<div id="emptyConvState" style="display:none;"></div>`;
+  }
+
+  async function sendMessage() {
+    const input = document.getElementById('msgInput');
+    const text = input.value.trim();
+
+    if (!text || !selectedPeer) return;
+
+    if (isGroupRoom(selectedPeer)) {
+      await sendGroupMessage(text, input);
+      return;
+    }
+
+    await sendDirectMessage(text, input);
+  }
+
+  async function sendDirectMessage(text, input) {
+    const optimistic = {
+      from: myPeerId,
+      to: selectedPeer,
+      message: text,
+      timestamp: Date.now(),
+      type: 'PRIVATE',
+      encrypted: true,
+      _optimistic: true
+    };
+
+    if (!msgCache[selectedPeer]) msgCache[selectedPeer] = [];
+    msgCache[selectedPeer].push(optimistic);
+    renderMessages(selectedPeer);
+    renderPeerList(allPeers);
+    scrollToBottom();
+
+    input.value = '';
+    input.style.height = 'auto';
+    updateSendBtn();
+
+    try {
+      const res = await fetch(`${SERVER}/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: selectedPeer, message: text, isGroup: false })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Lỗi không xác định');
+      }
+
+      setTimeout(() => loadMessages(selectedPeer), 400);
+    } catch (e) {
+      showToast('Gui that bai: ' + e.message, 'error');
+      msgCache[selectedPeer] = msgCache[selectedPeer].filter(m => m !== optimistic);
+      renderMessages(selectedPeer);
+      renderPeerList(allPeers);
+    }
+  }
+
+  async function sendGroupMessage(text, input) {
+    const recipients = getOnlinePeers().map(peer => peer.peer_id);
+    if (recipients.length === 0) {
+      showToast('Chua co peer online de nhan tin nhan nhom', 'error');
+      return;
+    }
+
+    const optimistic = {
+      from: myPeerId,
+      to: 'GROUP',
+      message: text,
+      timestamp: Date.now(),
+      type: 'GROUP_CHAT',
+      encrypted: true,
+      recipients,
+      _optimistic: true
+    };
+
+    if (!msgCache[GROUP_ROOM_ID]) msgCache[GROUP_ROOM_ID] = [];
+    msgCache[GROUP_ROOM_ID].push(optimistic);
+    renderMessages(GROUP_ROOM_ID);
+    renderPeerList(allPeers);
+    scrollToBottom();
+
+    input.value = '';
+    input.style.height = 'auto';
+    updateSendBtn();
+
+    try {
+      const res = await fetch(`${SERVER}/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, isGroup: true, recipients })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Lỗi không xác định');
+      }
+
+      setTimeout(() => loadGroupMessages(), 400);
+    } catch (e) {
+      showToast('Gui nhom that bai: ' + e.message, 'error');
+      msgCache[GROUP_ROOM_ID] = msgCache[GROUP_ROOM_ID].filter(m => m !== optimistic);
+      renderMessages(GROUP_ROOM_ID);
+      renderPeerList(allPeers);
+    }
+  }
+
+  function updateComposerState() {
+    const input = document.getElementById('msgInput');
+    input.placeholder = isGroupRoom(selectedPeer)
+      ? 'Nhập tin nhắn cho nhóm chung...'
+      : 'Nhập tin nhắn...';
+  }
+
+  function isNearBottom() {
+    const area = document.getElementById('messagesArea');
+    return area.scrollHeight - area.scrollTop - area.clientHeight < 100;
+  }
+
+  function scrollToBottom(smooth = true) {
+    const area = document.getElementById('messagesArea');
+    requestAnimationFrame(() => {
+      area.scrollTo({ top: area.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
+    });
+  }
+
+  function updateSendBtn() {
+    const btn = document.getElementById('sendBtn');
+    const val = document.getElementById('msgInput').value.trim();
+    btn.disabled = !val || !selectedPeer;
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function truncate(str, max) {
+    if (!str) return '';
+    return str.length > max ? str.substring(0, max) + '…' : str;
+  }
+
+  function setupInputListeners() {
+    const input = document.getElementById('msgInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const searchInput = document.getElementById('searchInput');
+
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    input.addEventListener('input', () => {
+      input.style.height = 'auto';
+      input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+      updateSendBtn();
+    });
+
+    sendBtn.addEventListener('click', sendMessage);
+    searchInput.addEventListener('input', () => renderPeerList(allPeers));
+  }
+
+  init();
+</script>
+</body>
+</html>
